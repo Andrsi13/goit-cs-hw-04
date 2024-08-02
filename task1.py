@@ -29,15 +29,15 @@ def process_files(file_paths, keywords, results):
 
 def main():
     directory = "test_files"
-    keywords = {"keyword1", "keyword2"}  # Заміни це на свої ключові слова
+    keywords = {"keyword1", "keyword2"}  #ключові слова
     results = {}
 
-    # Отримати всі текстові файли в каталозі
+    #текстові файли в каталозі
     file_paths = [
         os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".txt")
     ]
 
-    # Перевірка кількості файлів
+    # перевірка кількості файлів
     num_files = len(file_paths)
     num_threads = 4  # Кількість потоків
 
@@ -52,7 +52,7 @@ def main():
     chunks = [file_paths[i : i + chunk_size] for i in range(0, num_files, chunk_size)]
 
     print("Чекання на завершення всіх потоків...")
-    # Обробка файлів у паралельних потоках
+    # обробка файлів у паралельних потоках
     threads = []
     for chunk in chunks:
         thread = threading.Thread(target=process_files, args=(chunk, keywords, results))
@@ -63,7 +63,7 @@ def main():
         thread.join()
     print("Усі потоки завершені.")
 
-    # Виведення результатів
+    # введення результатів
     print("Результати пошуку:")
     for file_path, found_keywords in results.items():
         print(f"Файл: {file_path}, Ключові слова: {', '.join(found_keywords)}")

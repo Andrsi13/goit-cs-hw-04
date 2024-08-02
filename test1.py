@@ -1,36 +1,31 @@
-from multiprocessing import Process
-import logging
+from multiprocessing import Process, Value, RLock, current_process
 from time import sleep
+import logging
+import sys
 
 logger = logging.getLogger()
 stream_handler = logging.StreamHandler()
 logger.addHandler(stream_handler)
 logger.setLevel(logging.DEBUG)
 
-class MyProcess(Process):
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon=None):
-        super().__init__(group=group, target=target, name=name, daemon=daemon)
-        self.args = args
-
-    def run(self) -> None:
-        logger.debug(self.args)
-
-def example_work(params):
-    sleep(0.5)
-    logger.debug(params)
+def worker(val: Value):
+    logger.debug(f'Started {current_process().name}')
+    sleep(1)
+    with val.get_lock():
+        val.value += 1
+    logger.debug(f'Done {current_process().name}')
+    sys.exit(0)
 
 if __name__ == '__main__':
-    processes = []
-    for i in range(3):
-        pr = Process(target=example_work, args=(f"Count process function - {i}", ))
-        pr.start()
-        processes.append(pr)
+    lock = RLock()
+    value = Value('d', 0, lock=lock)
+    pr1 = Process(target=worker, args=(value, ))
+    pr1.start()
+    pr2 = Process(target=worker, args=(value, ))
+    pr2.start()
 
-    for i in range(2):
-        pr = MyProcess(args=(f"Count process class - {i}",))
-        pr.start()
-        processes.append(pr)
+    pr1.join()
+    pr2.join()
 
-    [el.join() for el in processes]
-    [print(el.exitcode, end=' ') for el in processes]
-    logger.debug('End program')
+    print(value.value)  # 2.0
+
