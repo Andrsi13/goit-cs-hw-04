@@ -1,22 +1,25 @@
 import multiprocessing
 import os
+import time
 
 def search_keywords_in_file(file_path, keywords, queue):
+    results = {keyword: [] for keyword in keywords}
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
-            found_keywords = {keyword for keyword in keywords if keyword in content}
-            if found_keywords:
-                queue.put((file_path, found_keywords))
+            for keyword in keywords:
+                if keyword in content:
+                    results[keyword].append(file_path)
     except Exception as e:
         print(f"Помилка при читанні файлу {file_path}: {e}")
+    queue.put(results)
 
 def process_files(file_paths, keywords, queue):
     for file_path in file_paths:
         search_keywords_in_file(file_path, keywords, queue)
 
 def main():
-    directory = 'test_files'  # шлях до каталогу
+    directory = 'test_files'  #  шлях до каталогу
     keywords = {'keyword1', 'keyword2'}  # ключові слова
     queue = multiprocessing.Queue()
     
@@ -34,10 +37,10 @@ def main():
     if num_files < num_processes:
         num_processes = num_files
 
-    chunk_size = max(num_files // num_processes, 1)
+    chunk_size = max(num_files // num_processes, 1) 
     chunks = [file_paths[i:i + chunk_size] for i in range(0, num_files, chunk_size)]
 
-    # Обробка файлів у паралельних процесах
+    start_time = time.time()
     processes = []
     for chunk in chunks:
         process = multiprocessing.Process(target=process_files, args=(chunk, keywords, queue))
@@ -46,17 +49,20 @@ def main():
     
     for process in processes:
         process.join()
-
-    # Збір результатів з черги
-    results = {}
+    
+    results = {keyword: [] for keyword in keywords}
     while not queue.empty():
-        file_path, found_keywords = queue.get()
-        results[file_path] = found_keywords
+        partial_result = queue.get()
+        for keyword, files in partial_result.items():
+            results[keyword].extend(files)
+
+    end_time = time.time()
+    print(f"Час виконання: {end_time - start_time:.2f} секунд")
 
     # Виведення результатів
     print("Результати пошуку:")
-    for file_path, found_keywords in results.items():
-        print(f"Файл: {file_path}, Ключові слова: {', '.join(found_keywords)}")
+    for keyword, files in results.items():
+        print(f"Ключове слово: {keyword}, Файли: {', '.join(files)}")
 
 if __name__ == '__main__':
     main()
